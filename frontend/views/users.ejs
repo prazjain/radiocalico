@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - My Website</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1><a href="/">My Website</a></h1>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/users">Users</a></li>
+                <li><a href="/user/add">Add User</a></li>
+                <li><a href="/post/add">Add Post</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <% if (error) { %>
+            <div class="flash-messages">
+                <div class="flash flash-error"><%= error %></div>
+            </div>
+        <% } %>
+
+        <div class="container">
+            <h2>All Users</h2>
+
+            <% if (users && users.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Posts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(user => { %>
+                            <tr>
+                                <td><%= user.id %></td>
+                                <td><%= user.username %></td>
+                                <td><%= user.email %></td>
+                                <td><%= new Date(user.created_at).toLocaleDateString() %></td>
+                                <td><%= user.post_count %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No users yet. <a href="/user/add">Add the first user!</a></p>
+            <% } %>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 My Website - Node.js Frontend + Python Backend</p>
+    </footer>
+</body>
+</html>

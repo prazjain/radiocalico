@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Calico - High-Quality Streaming Radio</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="/images/RadioCalicoLogoTM.png" alt="Radio Calico Logo">
+                <h1><a href="/">Radio Calico</a></h1>
+            </div>
+            <ul>
+                <li><a href="/">Listen</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/users">Community</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="hero">
+                <h1>Crystal-Clear Audio, No Ads</h1>
+                <p>Experience 48kHz FLAC / HLS Lossless streaming</p>
+            </div>
+
+            <% if (error) { %>
+                <div class="flash-messages">
+                    <div class="flash flash-error"><%= error %></div>
+                </div>
+            <% } %>
+
+            <div class="now-playing">
+                <h2>Now Playing</h2>
+                <div class="now-playing-content">
+                    <img src="/images/RadioCalicoLayout.png"
+                         alt="Album Art"
+                         class="album-art"
+                         id="albumArt"
+                         onerror="this.src='/images/RadioCalicoLogoTM.png'">
+                    <div class="track-info">
+                        <h2 id="trackTitle">Radio Calico</h2>
+                        <h3 id="artistName">High-Quality Streaming</h3>
+                        <p class="track-details" id="albumName">24/7 Music Stream</p>
+                        <div class="audio-quality">48kHz FLAC / HLS Lossless</div>
+                        <div class="audio-quality">Source quality: 16-bit 44.1kHz</div>
+
+                        <div class="song-rating">
+                            <span class="rating-label">Rate this song:</span>
+                            <button class="rating-btn thumbs-up" id="nowPlayingThumbsUp" onclick="rateSong('now-playing', 'up')" title="Thumbs up">
+                                👍 <span id="nowPlayingUpCount">0</span>
+                            </button>
+                            <button class="rating-btn thumbs-down" id="nowPlayingThumbsDown" onclick="rateSong('now-playing', 'down')" title="Thumbs down">
+                                👎 <span id="nowPlayingDownCount">0</span>
+                            </button>
+                        </div>
+
+                        <div class="audio-player">
+                            <div class="player-controls">
+                                <button class="play-button" id="playButton" onclick="togglePlay()">
+                                    <span id="playIcon">▶</span>
+                                </button>
+                                <span class="live-indicator">LIVE</span>
+                                <div class="volume-control">
+                                    <span class="volume-icon">🔊</span>
+                                    <input type="range"
+                                           class="volume-slider"
+                                           id="volumeSlider"
+                                           min="0"
+                                           max="100"
+                                           value="70"
+                                           onchange="setVolume(this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="previous-tracks">
+                <h2>Previous Tracks</h2>
+                <ul class="track-list" id="trackHistory">
+                    <li class="track-item">Loading track history...</li>
+                </ul>
+            </div>
+
+            <div class="container" style="margin-top: 2rem; padding: 2rem; background: var(--mint);">
+                <h2>Why Radio Calico?</h2>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.5rem 0;">✓ <strong>No Ads</strong> - Pure, uninterrupted music</li>
+                    <li style="padding: 0.5rem 0;">✓ <strong>High Quality</strong> - 48kHz FLAC lossless streaming</li>
+                    <li style="padding: 0.5rem 0;">✓ <strong>No Subscriptions</strong> - Completely free</li>
+                    <li style="padding: 0.5rem 0;">✓ <strong>No Data Collection</strong> - Your privacy matters</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Radio Calico - Ad-Free, Data-Free, Subscription-Free<br>
+        <a href="/about">About</a> | <a href="/users">Community</a></p>
+    </footer>
+
+    <audio id="radioStream" preload="none">
+        <source src="https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8" type="application/x-mpegURL">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        const audio = document.getElementById('radioStream');
+        const playButton = document.getElementById('playButton');
+        const playIcon = document.getElementById('playIcon');
+        const volumeSlider = document.getElementById('volumeSlider');
+        let isPlaying = false;
+
+        // Initialize HLS.js for streaming
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 90
+            });
+
+            hls.loadSource('https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8');
+            hls.attachMedia(audio);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                console.log('HLS stream ready');
+            });
+
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                console.error('HLS error:', data);
+                if (data.fatal) {
+                    switch(data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.log('Network error, trying to recover...');
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('Media error, trying to recover...');
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            console.log('Fatal error, cannot recover');
+                            break;
+                    }
+                }
+            });
+        } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            audio.src = 'https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8';
+        }
+
+        // Set initial volume
+        audio.volume = 0.7;
+
+        function togglePlay() {
+            if (isPlaying) {
+                audio.pause();
+                playIcon.textContent = '▶';
+                isPlaying = false;
+            } else {
+                audio.play().then(() => {
+                    playIcon.textContent = '⏸';
+                    isPlaying = true;
+                }).catch(error => {
+                    console.error('Playback failed:', error);
+                    alert('Unable to play stream. Please try again.');
+                });
+            }
+        }
+
+        function setVolume(value) {
+            audio.volume = value / 100;
+        }
+
+        // Update volume slider when changed
+        volumeSlider.addEventListener('input', function() {
+            setVolume(this.value);
+        });
+
+        // Handle audio errors
+        audio.addEventListener('error', function(e) {
+            console.error('Audio error:', e);
+            playIcon.textContent = '▶';
+            isPlaying = false;
+        });
+
+        // User identification - Generate or retrieve anonymous user ID
+        function getUserIdentifier() {
+            let userId = localStorage.getItem('radiocalico_user_id');
+            if (!userId) {
+                // Generate a unique ID
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('radiocalico_user_id', userId);
+            }
+            return userId;
+        }
+
+        // Store current song data globally
+        let currentSongData = {
+            song_id: null,
+            thumbs_up: 0,
+            thumbs_down: 0
+        };
+
+        // Update the Now Playing function to store song data
+        async function updateNowPlaying() {
+            try {
+                const response = await fetch('http://localhost:5000/api/nowplaying');
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Store song data globally
+                    currentSongData = {
+                        song_id: data.song_id,
+                        thumbs_up: data.thumbs_up || 0,
+                        thumbs_down: data.thumbs_down || 0
+                    };
+
+                    // Update track information
+                    if (data.title) {
+                        document.getElementById('trackTitle').textContent = data.title;
+                    }
+                    if (data.artist) {
+                        document.getElementById('artistName').textContent = data.artist;
+                    }
+                    if (data.album) {
+                        document.getElementById('albumName').textContent = data.album;
+                    }
+
+                    // Update rating counts
+                    document.getElementById('nowPlayingUpCount').textContent = data.thumbs_up || 0;
+                    document.getElementById('nowPlayingDownCount').textContent = data.thumbs_down || 0;
+
+                    // Check if user has already rated this song
+                    if (data.song_id) {
+                        checkUserRating(data.song_id, 'now-playing');
+                    }
+
+                    // Update album art with smooth transition
+                    if (data.albumArt) {
+                        const albumArtImg = document.getElementById('albumArt');
+                        const newSrc = data.albumArt.startsWith('http') ?
+                            data.albumArt :
+                            data.albumArt;
+
+                        if (albumArtImg.src !== newSrc) {
+                            albumArtImg.style.opacity = '0.5';
+                            setTimeout(() => {
+                                albumArtImg.src = newSrc;
+                                albumArtImg.onload = () => {
+                                    albumArtImg.style.opacity = '1';
+                                };
+                            }, 300);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching now playing data:', error);
+            }
+        }
+
+        // Check if user has already rated a song
+        async function checkUserRating(songId, context) {
+            const userId = getUserIdentifier();
+            try {
+                const response = await fetch(`http://localhost:5000/api/songs/${songId}/user-rating/${userId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.has_rated) {
+                        // Highlight the button they chose (both buttons remain enabled for editing)
+                        if (context === 'now-playing') {
+                            const upBtn = document.getElementById('nowPlayingThumbsUp');
+                            const downBtn = document.getElementById('nowPlayingThumbsDown');
+                            upBtn.classList.remove('rated');
+                            downBtn.classList.remove('rated');
+                            if (data.rating_type === 'up') {
+                                upBtn.classList.add('rated');
+                            } else {
+                                downBtn.classList.add('rated');
+                            }
+                        } else if (context.startsWith('history-')) {
+                            const index = context.split('-')[1];
+                            const trackItem = document.querySelector(`[data-song-id="${songId}"]`);
+                            if (trackItem) {
+                                const buttons = trackItem.querySelectorAll('.rating-btn');
+                                buttons[0].classList.remove('rated');
+                                buttons[1].classList.remove('rated');
+                                if (data.rating_type === 'up') {
+                                    buttons[0].classList.add('rated');
+                                } else {
+                                    buttons[1].classList.add('rated');
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking user rating:', error);
+            }
+        }
+
+        // Rate a song
+        async function rateSong(context, ratingType) {
+            let songId;
+
+            // Get song ID based on context
+            if (context === 'now-playing') {
+                songId = currentSongData.song_id;
+            } else if (context.startsWith('history-')) {
+                const index = context.split('-')[1];
+                const trackItem = document.querySelectorAll('.track-item')[index];
+                songId = trackItem ? trackItem.dataset.songId : null;
+            }
+
+            if (!songId) {
+                alert('Unable to rate song. Please try again.');
+                return;
+            }
+
+            const userId = getUserIdentifier();
+
+            try {
+                const response = await fetch(`http://localhost:5000/api/songs/${songId}/rate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_identifier: userId,
+                        rating_type: ratingType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update the rating counts
+                    if (context === 'now-playing') {
+                        document.getElementById('nowPlayingUpCount').textContent = data.song.thumbs_up;
+                        document.getElementById('nowPlayingDownCount').textContent = data.song.thumbs_down;
+
+                        // Remove rated class from both buttons and add to selected one
+                        const upBtn = document.getElementById('nowPlayingThumbsUp');
+                        const downBtn = document.getElementById('nowPlayingThumbsDown');
+                        upBtn.classList.remove('rated');
+                        downBtn.classList.remove('rated');
+
+                        if (ratingType === 'up') {
+                            upBtn.classList.add('rated');
+                        } else {
+                            downBtn.classList.add('rated');
+                        }
+                    } else if (context.startsWith('history-')) {
+                        const index = context.split('-')[1];
+                        document.getElementById(`historyUpCount-${index}`).textContent = data.song.thumbs_up;
+                        document.getElementById(`historyDownCount-${index}`).textContent = data.song.thumbs_down;
+
+                        // Remove rated class from both buttons and add to selected one
+                        const trackItem = document.querySelectorAll('.track-item')[index];
+                        const buttons = trackItem.querySelectorAll('.rating-btn');
+                        buttons[0].classList.remove('rated');
+                        buttons[1].classList.remove('rated');
+
+                        if (ratingType === 'up') {
+                            buttons[0].classList.add('rated');
+                        } else {
+                            buttons[1].classList.add('rated');
+                        }
+                    }
+
+                    // Show success message
+                    if (data.updated) {
+                        console.log('Rating updated successfully!');
+                    } else {
+                        console.log('Rating submitted successfully!');
+                    }
+                } else {
+                    // Error occurred
+                    alert(data.error || 'Unable to submit rating');
+                }
+            } catch (error) {
+                console.error('Error submitting rating:', error);
+                alert('Unable to submit rating. Please try again.');
+            }
+        }
+
+        // Update track history function to check user ratings
+        async function updateTrackHistory() {
+            try {
+                const response = await fetch('http://localhost:5000/api/trackhistory');
+                if (response.ok) {
+                    const data = await response.json();
+
+                    const trackHistoryList = document.getElementById('trackHistory');
+
+                    if (data.tracks && data.tracks.length > 0) {
+                        trackHistoryList.innerHTML = '';
+
+                        data.tracks.forEach((track, index) => {
+                            const li = document.createElement('li');
+                            li.className = 'track-item';
+                            li.dataset.songId = track.song_id;
+
+                            // Format the time if available
+                            let timeInfo = '';
+                            if (track.playedAt) {
+                                const playedDate = new Date(track.playedAt);
+                                const now = new Date();
+                                const diffMinutes = Math.floor((now - playedDate) / 60000);
+
+                                if (diffMinutes < 60) {
+                                    timeInfo = `<span class="track-time">${diffMinutes} min ago</span>`;
+                                } else {
+                                    timeInfo = `<span class="track-time">${playedDate.toLocaleTimeString()}</span>`;
+                                }
+                            }
+
+                            li.innerHTML = `
+                                <div class="track-details-row">
+                                    <div>
+                                        <strong>${track.title || track.artist || 'Unknown Track'}</strong><br>
+                                        <small>${track.artist || ''}</small>
+                                        ${track.album ? `<br><em style="color: #666;">${track.album}</em>` : ''}
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div class="song-rating" style="margin: 0;">
+                                            <button class="rating-btn thumbs-up" onclick="rateSong('history-${index}', 'up')" title="Thumbs up">
+                                                👍 <span id="historyUpCount-${index}">${track.thumbs_up || 0}</span>
+                                            </button>
+                                            <button class="rating-btn thumbs-down" onclick="rateSong('history-${index}', 'down')" title="Thumbs down">
+                                                👎 <span id="historyDownCount-${index}">${track.thumbs_down || 0}</span>
+                                            </button>
+                                        </div>
+                                        ${timeInfo}
+                                    </div>
+                                </div>
+                            `;
+
+                            trackHistoryList.appendChild(li);
+
+                            // Check if user has rated this song
+                            if (track.song_id) {
+                                checkUserRating(track.song_id, `history-${index}`);
+                            }
+                        });
+                    } else {
+                        trackHistoryList.innerHTML = '<li class="track-item">No track history available</li>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching track history:', error);
+                const trackHistoryList = document.getElementById('trackHistory');
+                trackHistoryList.innerHTML = '<li class="track-item">Unable to load track history</li>';
+            }
+        }
+
+        // Initialize - Update now playing and track history immediately, then at intervals
+        updateNowPlaying();
+        setInterval(updateNowPlaying, 10000);  // Every 10 seconds
+
+        updateTrackHistory();
+        setInterval(updateTrackHistory, 30000);  // Every 30 seconds
+    </script>
+</body>
+</html>
